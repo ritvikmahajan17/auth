@@ -7,6 +7,8 @@ authRouter.use(express.json());
 authRouter.post("/user",controller.userController);
 authRouter.post("/login",controller.loginController);
 authRouter.get("/token/validate",controller.validateController);
+// authRouter.get("/allUsers",controller.getUsers);
+
 
 
 

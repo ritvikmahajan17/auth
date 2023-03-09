@@ -3,9 +3,10 @@ const bcrypt = require("bcrypt");
 const saltRounds = 10;
 const utils = require("../utils/auth.utils");
 const redisFunctions = require("../utils/redis.utils");
+const { HTTPError } = require("../error/error");
 
 
-const saveUserDetailsService = async (username,password) => {
+const saveUserDetailsService = async (email,password) => {
     let hashedPass="";
     await bcrypt
         .genSalt(saltRounds)
@@ -16,36 +17,44 @@ const saveUserDetailsService = async (username,password) => {
             hashedPass=hash;
         })
         .catch(err => console.error(err.message));
-    
+    // console.log(email,hashedPass);
     const user = await authentication.create({
-        username:username,
+        email:email,
         password:hashedPass
     });
+
+    console.log(user);
 
     return user;
 };
 
-const loginService = async (username,password) => {
-
+const loginService = async (email,password) => {
+    console.log(email,password);
     const user = await authentication.findOne({
         where:{
-            username:username,
+            email:email,
         }
     });
 
+    console.log(user);
+
     if(!user){
-        throw new Error({"message":"Username not found"});
+        throw new Error({"message":"email not found"});
     }
 
     const isValid = await bcrypt.compare(password,user.password);
-
-    if(!isValid) throw new Error({"message":"Incorrect Password"});
-    
+    // console.log(isValid);
+    if(!isValid) {
+        // console.log("invalid");
+        throw new HTTPError("Incorrect Password",500);
+    }
+    // console.log("valid");
     const accessToken = utils.getAccesToken({
-        username:username,
+        email:email,
     });
+    // console.log(accessToken);
 
-    redisFunctions.storeToken(accessToken,user.username);
+    redisFunctions.storeToken(accessToken,user.email);
 
     return {accessToken:accessToken}; 
 };
@@ -53,12 +62,17 @@ const loginService = async (username,password) => {
 
 const validateTokenService = async (token) => {
     const decoded = utils.validateToken(token);
-    console.log(decoded.username);
-    const tokenFromRedis = await redisFunctions.getToken(decoded.username);
-    console.log(tokenFromRedis,token);
-    if (tokenFromRedis !== token) throw new Error("Invalid token");
+    // console.log(decoded.email);
+    const tokenFromRedis = await redisFunctions.getToken(token);
+    // console.log(tokenFromRedis,token);
+    if (!tokenFromRedis) throw new Error("Invalid token");
     return decoded;
 };
+
+// const getUsersService = async () => {
+//     const users = await authentication.findAll();
+//     return users;
+// };
 
 
 
@@ -66,5 +80,6 @@ const validateTokenService = async (token) => {
 module.exports = {
     saveUserDetailsService,
     loginService,
-    validateTokenService
+    validateTokenService,
+    // getUsersService
 };

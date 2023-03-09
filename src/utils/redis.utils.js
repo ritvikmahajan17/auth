@@ -1,18 +1,26 @@
 const redis = require("redis");
 
-const client = redis.createClient();
+
+const config = {
+    socket: {
+        host: process.env.REDIS_HOST,
+        port: 6379,
+    },
+};
+const client = redis.createClient(config);
 
 client.connect().then(() => {
     console.log("Redis connected");
 });
-const storeToken = async (token, username) => {
-    await client.set(username, token, "EX", 60 * 60);
+const storeToken = async (token, email) => {
+    const response=await client.set(token,email, "EX", 60 * 60);
+    return response;
 };
 
-const getToken = async (username) => {
-    console.log(username,"username");
-    const token = await client.get(username);
-    return token;
+const getToken = async (token) => {
+    // console.log(email,"email");
+    const redisToken = await client.get(token);
+    return redisToken;
 };
 
-module.exports = { storeToken, getToken };
+module.exports = { storeToken, getToken,client };
